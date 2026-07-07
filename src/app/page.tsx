@@ -12,6 +12,13 @@ interface GenerateResult {
   error?: string;
 }
 
+interface QuotaInfo {
+  used: number;
+  remaining: number;
+  max_per_day: number;
+  signedIn: boolean;
+}
+
 export default function Home() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -24,8 +31,27 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [quota, setQuota] = useState<QuotaInfo>({
+    used: 0,
+    remaining: 3,
+    max_per_day: 3,
+    signedIn: false,
+  });
 
   const supabase = createClient();
+
+  // Fetch quota
+  const fetchQuota = useCallback(async () => {
+    try {
+      const res = await fetch("/api/quota");
+      if (res.ok) {
+        const data = await res.json();
+        setQuota(data);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -33,17 +59,24 @@ export default function Home() {
       setUserLoading(false);
     });
 
-    // Listen for auth state changes
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchQuota();
+        }
       }
     );
 
     return () => {
       listener.subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchQuota]);
+
+  // Fetch quota when user changes
+  useEffect(() => {
+    if (user) fetchQuota();
+  }, [user, fetchQuota]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -84,10 +117,14 @@ export default function Home() {
       const data = await response.json();
 
       if (!response.ok) {
+        // Update quota even on error
+        if (data.quota) setQuota(data.quota);
         throw new Error(data.error || "Generation failed");
       }
 
       setResults(data.results);
+      // Refresh quota after successful generation
+      if (data.quota) setQuota(data.quota);
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");
     } finally {
@@ -100,6 +137,8 @@ export default function Home() {
     setCopiedId(platformId);
     setTimeout(() => setCopiedId(null), 2000);
   };
+
+  const quotaExhausted = !!(user && quota.remaining <= 0);
 
   return (
     <div className="min-h-screen">
@@ -151,11 +190,11 @@ export default function Home() {
         {/* Hero */}
         <section className="text-center mb-10">
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3">
-            One Article → Every Platform
+            One Article &rarr; Every Platform
           </h1>
           <p className="text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto text-base">
             Paste your blog post, article, or any text. AI instantly rewrites it
-            for Twitter, LinkedIn, Reddit, and more — with platform-perfect tone.
+            for Twitter, LinkedIn, Reddit, and more &mdash; with platform-perfect tone.
           </p>
         </section>
 
@@ -195,11 +234,28 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Generate Button */}
+        {/* Generate Button + Quota */}
         <div className="text-center mb-10">
+          {/* Quota display for signed-in users */}
+          {user && (
+            <div className="mb-3">
+              <span
+                className={`text-xs font-medium px-3 py-1 rounded-full ${
+                  quotaExhausted
+                    ? "bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400"
+                    : quota.remaining <= 1
+                      ? "bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400"
+                      : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                }`}
+              >
+                {quota.remaining}/{quota.max_per_day} free generations left today
+              </span>
+            </div>
+          )}
+
           <button
             onClick={handleGenerate}
-            disabled={loading || !inputText.trim()}
+            disabled={loading || !inputText.trim() || quotaExhausted}
             className="px-8 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold text-base shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.02] active:scale-[0.98]"
           >
             {loading ? (
@@ -225,10 +281,22 @@ export default function Home() {
                 </svg>
                 Generating...
               </span>
+            ) : quotaExhausted ? (
+              "Daily Limit Reached"
             ) : (
               "Generate Posts"
             )}
           </button>
+
+          {/* CTA for non-signed-in users */}
+          {!user && !userLoading && (
+            <p className="text-xs text-zinc-400 mt-3">
+              <a href="/sign-up" className="text-purple-500 hover:underline">
+                Sign up
+              </a>{" "}
+              to get 3 free generations per day.
+            </p>
+          )}
         </div>
 
         {/* Error */}
@@ -320,7 +388,7 @@ export default function Home() {
               <div className="text-2xl mb-2">⚡</div>
               <h3 className="font-semibold mb-1 text-sm">5 Platforms, 1 Click</h3>
               <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                Twitter, LinkedIn, Reddit, Facebook, Xiaohongshu — all from one
+                Twitter, LinkedIn, Reddit, Facebook, Xiaohongshu &mdash; all from one
                 paste.
               </p>
             </div>
