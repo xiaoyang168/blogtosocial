@@ -2,6 +2,12 @@
 
 import { useState, useCallback } from "react";
 import { platforms } from "@/lib/platforms";
+import {
+  SignInButton,
+  SignUpButton,
+  UserButton,
+  useAuth,
+} from "@clerk/nextjs";
 
 interface GenerateResult {
   platform: { id: string; name: string; icon: string };
@@ -10,6 +16,7 @@ interface GenerateResult {
 }
 
 export default function Home() {
+  const { isSignedIn } = useAuth();
   const [inputText, setInputText] = useState("");
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(
     platforms.map((p) => p.id)
@@ -80,7 +87,30 @@ export default function Home() {
               AI
             </span>
           </div>
-          <span className="text-sm text-zinc-400">Beta</span>
+          <div className="flex items-center gap-3">
+            {!isSignedIn ? (
+              <>
+                <SignInButton mode="modal">
+                  <button className="text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors">
+                    Sign In
+                  </button>
+                </SignInButton>
+                <SignUpButton mode="modal">
+                  <button className="text-sm font-medium px-3 py-1.5 rounded-lg bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:opacity-90 transition-opacity">
+                    Sign Up
+                  </button>
+                </SignUpButton>
+              </>
+            ) : (
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: "w-8 h-8",
+                  },
+                }}
+              />
+            )}
+          </div>
         </div>
       </header>
 
