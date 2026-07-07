@@ -1,13 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { platforms } from "@/lib/platforms";
-import {
-  SignInButton,
-  SignUpButton,
-  UserButton,
-  useAuth,
-} from "@clerk/nextjs";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import type { User } from "@supabase/supabase-js";
 
 interface GenerateResult {
   platform: { id: string; name: string; icon: string };
@@ -16,7 +13,9 @@ interface GenerateResult {
 }
 
 export default function Home() {
-  const { isSignedIn } = useAuth();
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [userLoading, setUserLoading] = useState(true);
   const [inputText, setInputText] = useState("");
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(
     platforms.map((p) => p.id)
@@ -25,6 +24,32 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+      setUserLoading(false);
+    });
+
+    // Listen for auth state changes
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+      }
+    );
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    router.refresh();
+  };
 
   const togglePlatform = (id: string) => {
     setSelectedPlatforms((prev) =>
@@ -88,27 +113,35 @@ export default function Home() {
             </span>
           </div>
           <div className="flex items-center gap-3">
-            {!isSignedIn ? (
-              <>
-                <SignInButton mode="modal">
-                  <button className="text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors">
-                    Sign In
-                  </button>
-                </SignInButton>
-                <SignUpButton mode="modal">
-                  <button className="text-sm font-medium px-3 py-1.5 rounded-lg bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:opacity-90 transition-opacity">
-                    Sign Up
-                  </button>
-                </SignUpButton>
-              </>
+            {userLoading ? (
+              <div className="w-6 h-6 rounded-full bg-zinc-200 dark:bg-zinc-700 animate-pulse" />
+            ) : user ? (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                  {user.email}
+                </span>
+                <button
+                  onClick={handleSignOut}
+                  className="text-sm font-medium text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+                >
+                  Sign Out
+                </button>
+              </div>
             ) : (
-              <UserButton
-                appearance={{
-                  elements: {
-                    avatarBox: "w-8 h-8",
-                  },
-                }}
-              />
+              <>
+                <a
+                  href="/sign-in"
+                  className="text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                >
+                  Sign In
+                </a>
+                <a
+                  href="/sign-up"
+                  className="text-sm font-medium px-3 py-1.5 rounded-lg bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:opacity-90 transition-opacity"
+                >
+                  Sign Up
+                </a>
+              </>
             )}
           </div>
         </div>
