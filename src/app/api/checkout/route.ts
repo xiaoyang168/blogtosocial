@@ -118,3 +118,4 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// Debug: extended error logging
