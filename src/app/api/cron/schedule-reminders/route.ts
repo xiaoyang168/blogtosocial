@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -13,10 +13,11 @@ export async function GET(request: Request) {
   }
 
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
-    // Find scheduled posts that are due within next 15 minutes and haven't been reminded
+    // Find scheduled posts: -30min to +15min from now, not yet reminded
     const now = new Date();
+    const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
     const fifteenMinutesLater = new Date(now.getTime() + 15 * 60 * 1000);
 
     const { data: duePosts, error: fetchError } = await supabase
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
       .eq("status", "scheduled")
       .eq("reminder_sent", false)
       .lte("scheduled_at", fifteenMinutesLater.toISOString())
-      .gte("scheduled_at", now.toISOString())
+      .gte("scheduled_at", thirtyMinutesAgo.toISOString())
       .order("scheduled_at", { ascending: true });
 
     if (fetchError) {
@@ -41,19 +42,17 @@ export async function GET(request: Request) {
     const results: { id: string; email: string; status: string }[] = [];
 
     for (const post of duePosts) {
-      // Get user email from auth.users
-      const { data: userData, error: userError } = await supabase
-        .from("auth.users")
-        .select("email")
-        .eq("id", post.user_id)
-        .single();
+      // Get user email via admin API
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(
+        post.user_id
+      );
 
-      if (userError || !userData?.email) {
+      const userEmail = userData?.user?.email;
+
+      if (userError || !userEmail) {
         console.warn(`No email found for user ${post.user_id}`);
         continue;
       }
-
-      const userEmail = userData.email;
       const userName = userEmail.split("@")[0] || "there";
 
       try {
@@ -66,7 +65,7 @@ export async function GET(request: Request) {
         });
 
         await resend.emails.send({
-          from: "BlogToSocial <reminders@blogtosocial.top>",
+          from: process.env.RESEND_FROM_EMAIL || "BlogToSocial <onboarding@resend.dev>",
           to: userEmail,
           subject: `Reminder: Your ${platformName} post is scheduled for ${scheduledTime}`,
           html: `
