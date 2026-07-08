@@ -69,6 +69,16 @@ export default function Navbar() {
             >
               Home
             </a>
+            <a
+              href="/pricing"
+              className={`text-sm font-medium transition-colors ${
+                pathname === "/pricing"
+                  ? "text-zinc-900 dark:text-white"
+                  : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+              }`}
+            >
+              Pricing
+            </a>
 
             {loading ? (
               <div className="w-20 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
