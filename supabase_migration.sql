@@ -102,3 +102,33 @@ BEGIN
   RETURN current_count <= user_limit;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 9. Create scheduled_posts table for auto-scheduling
+CREATE TABLE IF NOT EXISTS scheduled_posts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  platform_id TEXT NOT NULL CHECK (platform_id IN ('twitter', 'linkedin', 'reddit', 'wechat', 'xiaohongshu', 'facebook')),
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'scheduled', 'published', 'failed')),
+  scheduled_at TIMESTAMPTZ NOT NULL,
+  published_at TIMESTAMPTZ,
+  error_message TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE scheduled_posts ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can CRUD own scheduled posts"
+ON scheduled_posts FOR ALL
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Service can manage scheduled posts"
+ON scheduled_posts FOR ALL
+USING (true)
+WITH CHECK (true);
+
+-- 10. Create index for efficient querying
+CREATE INDEX IF NOT EXISTS idx_scheduled_posts_user_status ON scheduled_posts(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_scheduled_posts_scheduled_at ON scheduled_posts(scheduled_at) WHERE status = 'scheduled';
