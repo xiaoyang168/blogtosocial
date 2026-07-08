@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
       const errorBody = await paddleResponse.text();
       console.error("Paddle API error:", paddleResponse.status, errorBody);
       return NextResponse.json(
-        { error: `Payment provider error (${paddleResponse.status}): ${errorBody.slice(0, 200)}` },
+        { error: `Payment provider error (${paddleResponse.status}): ${errorBody.slice(0, 500)}` },
         { status: 502 }
       );
     }
@@ -117,3 +117,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
