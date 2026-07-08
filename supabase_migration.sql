@@ -30,12 +30,16 @@ CREATE OR REPLACE FUNCTION get_daily_quota(user_id_input UUID)
 RETURNS TABLE(used INT, remaining INT, max_per_day INT) AS $$
 DECLARE
   daily_limit INT := 3; -- Free tier: 3 generations per day
+  user_count INT;
 BEGIN
-  SELECT COALESCE(uq.count, 0) INTO used
-  FROM user_quotas uq
-  WHERE uq.user_id = user_id_input AND uq.date = CURRENT_DATE;
-  
-  remaining := GREATEST(daily_limit - used, 0);
+  -- Subquery ensures we always get a row (COALESCE to 0 if null)
+  SELECT COALESCE(
+    (SELECT uq.count FROM user_quotas uq WHERE uq.user_id = user_id_input AND uq.date = CURRENT_DATE),
+    0
+  ) INTO user_count;
+
+  used := user_count;
+  remaining := GREATEST(daily_limit - user_count, 0);
   max_per_day := daily_limit;
   RETURN NEXT;
 END;

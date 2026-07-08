@@ -13,7 +13,7 @@ export const platforms: Platform[] = [
     id: "twitter",
     name: "Twitter / X",
     icon: "𝕏",
-    color: "bg-black hover:bg-zinc-800",
+    color: "from-zinc-900 to-zinc-700 dark:from-white dark:to-zinc-400",
     maxChars: 280,
     tone: "Casual, punchy, with a hook. Use line breaks. Can use emojis sparingly.",
     systemPrompt: `You are a Twitter growth expert. Rewrite content into viral Twitter posts.
@@ -32,7 +32,7 @@ Rules:
     id: "linkedin",
     name: "LinkedIn",
     icon: "💼",
-    color: "bg-blue-600 hover:bg-blue-700",
+    color: "from-blue-500 to-blue-600",
     maxChars: 3000,
     tone: "Professional, storytelling, insightful. Use paragraph breaks.",
     systemPrompt: `You are a LinkedIn content strategist. Rewrite content into compelling LinkedIn posts.
@@ -50,7 +50,7 @@ Rules:
     id: "reddit",
     name: "Reddit",
     icon: "🤖",
-    color: "bg-orange-600 hover:bg-orange-700",
+    color: "from-orange-500 to-orange-600",
     maxChars: 10000,
     tone: "Authentic, helpful, no marketing speak. Write like a real person sharing knowledge.",
     systemPrompt: `You are a Reddit power user. Rewrite content into a Reddit post that sounds like a real person sharing useful information.
@@ -65,10 +65,29 @@ Rules:
 - Sound like you're helping, not selling`,
   },
   {
+    id: "wechat",
+    name: "微信公众号",
+    icon: "💬",
+    color: "from-green-500 to-emerald-600",
+    maxChars: 2000,
+    tone: "专业但不失亲和，有干货有观点，适合微信生态的阅读习惯。",
+    systemPrompt: `你是一位微信公众号资深编辑。将内容改写成适合微信公众号发布的文章风格帖子。
+
+要求：
+- 标题要吸引眼球，可使用疑问句或数字列表式（如"5个方法..."）
+- 开头用一段引言或故事引入，快速抓住读者注意力
+- 正文分段落，每段2-3句，适当使用小标题分隔
+- 语言风格：专业但不生硬，有温度但不过度煽情
+- 善用排版技巧：适当使用加粗、列表等突出重点
+- 结尾要有总结或呼吁行动（关注、在看、转发）
+- 可在文末添加引导关注的语句
+- 字数：500-1000字`,
+  },
+  {
     id: "xiaohongshu",
-    name: "WeChat / 小红书",
+    name: "小红书",
     icon: "📕",
-    color: "bg-red-500 hover:bg-red-600",
+    color: "from-red-500 to-rose-500",
     maxChars: 1000,
     tone: "年轻、活泼、种草风。大量emoji和感叹号，像朋友分享。",
     systemPrompt: `你是小红书爆款文案专家。把内容改写成小红书风格的帖子。
@@ -87,7 +106,7 @@ Rules:
     id: "facebook",
     name: "Facebook",
     icon: "📘",
-    color: "bg-blue-700 hover:bg-blue-800",
+    color: "from-blue-600 to-blue-700",
     maxChars: 5000,
     tone: "Friendly, engaging, community-focused. Good for longer-form content.",
     systemPrompt: `You are a Facebook content strategist. Rewrite content into engaging Facebook posts.
