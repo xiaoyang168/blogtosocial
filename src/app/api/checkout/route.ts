@@ -65,6 +65,7 @@ export async function POST(request: NextRequest) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Accept": "application/json",
         Authorization: `Bearer ${PADDLE_API_KEY}`,
       },
       body: JSON.stringify({
@@ -77,6 +78,7 @@ export async function POST(request: NextRequest) {
         customer: {
           email: user.email,
         },
+        collection_mode: "automatic",
         custom_data: {
           user_id: user.id,
           plan: plan,
@@ -88,7 +90,7 @@ export async function POST(request: NextRequest) {
       const errorBody = await paddleResponse.text();
       console.error("Paddle API error:", paddleResponse.status, errorBody);
       return NextResponse.json(
-        { error: "Payment provider error. Please try again later." },
+        { error: `Payment provider error (${paddleResponse.status}): ${errorBody.slice(0, 200)}` },
         { status: 502 }
       );
     }
