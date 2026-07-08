@@ -89,6 +89,17 @@ export async function POST(request: NextRequest) {
     if (!paddleResponse.ok) {
       const errorBody = await paddleResponse.text();
       console.error("Paddle API error:", paddleResponse.status, errorBody);
+
+      // If Paddle account is not fully verified, show friendly message instead of raw error
+      if (errorBody.includes("transaction_checkout_not_enabled") || errorBody.includes("not yet been enabled")) {
+        return NextResponse.json({
+          checkoutUrl: null,
+          message: "Paid plans are coming soon! We are finalizing our payment setup. Check back in a few days or contact us for early access.",
+          contactEmail: "support@blogtosocial.top",
+          plan: plan,
+        });
+      }
+
       return NextResponse.json(
         { error: `Payment provider error (${paddleResponse.status}): ${errorBody.slice(0, 500)}` },
         { status: 502 }
@@ -117,6 +128,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-// Debug: extended error logging
-// Debug: extended error logging
