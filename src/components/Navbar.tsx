@@ -89,6 +89,16 @@ export default function Navbar() {
             >
               Schedule
             </a>
+            <a
+              href="/history"
+              className={`text-sm font-medium transition-colors ${
+                pathname === "/history"
+                  ? "text-zinc-900 dark:text-white"
+                  : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+              }`}
+            >
+              History
+            </a>
 
             {loading ? (
               <div className="w-20 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 animate-pulse" />
@@ -180,6 +190,16 @@ export default function Navbar() {
               }`}
             >
               Schedule
+            </a>
+            <a
+              href="/history"
+              className={`block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                pathname === "/history"
+                  ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white"
+                  : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+              }`}
+            >
+              History
             </a>
             {loading ? (
               <div className="w-full h-9 rounded-lg bg-zinc-100 dark:bg-zinc-800 animate-pulse" />

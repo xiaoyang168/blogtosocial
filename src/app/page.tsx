@@ -124,6 +124,20 @@ export default function Home() {
       }
     );
 
+    // Restore from sessionStorage if coming from /history
+    const restore = sessionStorage.getItem("restore_post");
+    if (restore) {
+      try {
+        const data = JSON.parse(restore);
+        if (data.source_text) setInputText(data.source_text);
+        if (data.platforms) setSelectedPlatforms(data.platforms);
+        sessionStorage.removeItem("restore_post");
+        showToast("Content restored from history!", "info");
+      } catch {
+        sessionStorage.removeItem("restore_post");
+      }
+    }
+
     return () => {
       listener.subscription.unsubscribe();
     };
@@ -481,7 +495,7 @@ export default function Home() {
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-semibold">Recent Generations</h2>
               <a
-                href="/schedule"
+                href="/history"
                 className="text-sm text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1"
               >
                 View all
