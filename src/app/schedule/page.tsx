@@ -14,6 +14,8 @@ interface ScheduledPost {
   scheduled_at: string;
   published_at: string | null;
   error_message: string | null;
+  reminder_sent: boolean;
+  reminder_sent_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -409,13 +411,21 @@ export default function SchedulePage() {
                       </p>
 
                       {/* Meta row */}
-                      <div className="flex items-center gap-3 text-xs text-zinc-400">
+                      <div className="flex items-center gap-3 text-xs text-zinc-400 flex-wrap">
                         <span className="flex items-center gap-1">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           {formatDateTime(post.scheduled_at)}
                         </span>
+                        {post.status === "scheduled" && (
+                          <span className={`flex items-center gap-1 ${post.reminder_sent ? "text-emerald-500" : "text-amber-500"}`}>
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                            </svg>
+                            {post.reminder_sent ? "Reminder sent" : "Reminder pending"}
+                          </span>
+                        )}
                         {post.published_at && (
                           <span className="flex items-center gap-1">
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
