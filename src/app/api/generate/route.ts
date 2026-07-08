@@ -110,6 +110,24 @@ export async function POST(request: NextRequest) {
       selectedPlatforms,
     });
 
+    // Save to history
+    try {
+      const { error: saveError } = await supabase
+        .from("generated_posts")
+        .insert({
+          user_id: user.id,
+          source_text: trimmedText,
+          results: results,
+          platforms: selectedPlatforms,
+        });
+
+      if (saveError) {
+        console.error("Failed to save history:", saveError);
+      }
+    } catch (saveErr) {
+      console.error("History save error:", saveErr);
+    }
+
     // Get updated quota
     const quota = await getRemainingQuota(user.id);
 

@@ -46,6 +46,14 @@ function CopyIcon() {
   );
 }
 
+interface HistoryPost {
+  id: string;
+  source_text: string;
+  results: Record<string, any>;
+  platforms: string[];
+  created_at: string;
+}
+
 export default function Home() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -65,6 +73,8 @@ export default function Home() {
     max_per_day: 3,
     signedIn: false,
   });
+  const [history, setHistory] = useState<HistoryPost[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
 
   const supabase = createClient();
@@ -82,6 +92,22 @@ export default function Home() {
     }
   }, []);
 
+  // Fetch history
+  const fetchHistory = useCallback(async () => {
+    try {
+      setHistoryLoading(true);
+      const res = await fetch("/api/history?limit=6");
+      if (res.ok) {
+        const data = await res.json();
+        setHistory(data.posts || []);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
@@ -93,6 +119,7 @@ export default function Home() {
         setUser(session?.user ?? null);
         if (session?.user) {
           fetchQuota();
+          fetchHistory();
         }
       }
     );
@@ -100,11 +127,14 @@ export default function Home() {
     return () => {
       listener.subscription.unsubscribe();
     };
-  }, [fetchQuota]);
+  }, [fetchQuota, fetchHistory]);
 
   useEffect(() => {
-    if (user) fetchQuota();
-  }, [user, fetchQuota]);
+    if (user) {
+      fetchQuota();
+      fetchHistory();
+    }
+  }, [user, fetchQuota, fetchHistory]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -151,6 +181,7 @@ export default function Home() {
 
       setResults(data.results);
       if (data.quota) setQuota(data.quota);
+      fetchHistory(); // Refresh history after generation
 
       // Scroll to results
       setTimeout(() => {
@@ -442,6 +473,58 @@ export default function Home() {
             <h3 className="text-base font-medium text-zinc-500 dark:text-zinc-400 mb-1">Ready to transform your content</h3>
             <p className="text-sm">Paste your content above, select platforms, and click Generate.</p>
           </div>
+        )}
+
+        {/* === Recent Generations === */}
+        {user && history.length > 0 && (
+          <section className="mt-16 mb-4">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-semibold">Recent Generations</h2>
+              <a
+                href="/schedule"
+                className="text-sm text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1"
+              >
+                View all
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+              </a>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {history.slice(0, 6).map((post) => (
+                <div
+                  key={post.id}
+                  className="group p-4 rounded-2xl border border-zinc-200/60 dark:border-zinc-700/60 bg-white dark:bg-zinc-900 hover:shadow-lg hover:shadow-purple-500/5 transition-all cursor-pointer"
+                  onClick={() => {
+                    setInputText(post.source_text);
+                    setSelectedPlatforms(post.platforms);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                    showToast("Content restored! Click Generate to recreate.", "info");
+                  }}
+                >
+                  <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                    {post.platforms.map((pid) => {
+                      const p = platforms.find((pl) => pl.id === pid);
+                      return p ? (
+                        <span key={pid} className="text-xs px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                          {p.icon} {p.name}
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-300 line-clamp-3 mb-2">
+                    {post.source_text}
+                  </p>
+                  <div className="flex items-center justify-between text-xs text-zinc-400">
+                    <span>{new Date(post.created_at).toLocaleDateString()}</span>
+                    <span className="opacity-0 group-hover:opacity-100 transition-opacity text-purple-500">
+                      Click to restore
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
         {/* === Features Section === */}

@@ -132,3 +132,28 @@ WITH CHECK (true);
 -- 10. Create index for efficient querying
 CREATE INDEX IF NOT EXISTS idx_scheduled_posts_user_status ON scheduled_posts(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_scheduled_posts_scheduled_at ON scheduled_posts(scheduled_at) WHERE status = 'scheduled';
+
+-- 11. Create generated_posts table for history tracking
+CREATE TABLE IF NOT EXISTS generated_posts (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  source_text TEXT NOT NULL,
+  results JSONB NOT NULL,
+  platforms TEXT[] NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE generated_posts ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can read own generated posts"
+ON generated_posts FOR SELECT
+USING (auth.uid() = user_id);
+
+CREATE POLICY "Service can manage generated posts"
+ON generated_posts FOR ALL
+USING (true)
+WITH CHECK (true);
+
+-- 12. Create index for history lookup
+CREATE INDEX IF NOT EXISTS idx_generated_posts_user_created ON generated_posts(user_id, created_at DESC);
