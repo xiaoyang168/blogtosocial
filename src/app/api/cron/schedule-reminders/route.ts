@@ -6,10 +6,17 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Vercel Cron will call this every 5 minutes
 export async function GET(request: Request) {
-  // Verify cron secret to prevent unauthorized access
+  // Verify cron secret only if configured; otherwise allow Vercel cron to work
   const authHeader = request.headers.get("Authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const cronSecret = process.env.CRON_SECRET;
+
+  if (cronSecret) {
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      console.warn("Cron auth failed: missing or invalid Authorization header");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+  } else {
+    console.warn("CRON_SECRET is not set. Cron endpoint is unprotected.");
   }
 
   try {
@@ -19,6 +26,8 @@ export async function GET(request: Request) {
     const now = new Date();
     const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
     const fifteenMinutesLater = new Date(now.getTime() + 15 * 60 * 1000);
+
+    console.log("Cron running at", now.toISOString(), "window:", thirtyMinutesAgo.toISOString(), "to", fifteenMinutesLater.toISOString());
 
     const { data: duePosts, error: fetchError } = await supabase
       .from("scheduled_posts")
@@ -33,6 +42,8 @@ export async function GET(request: Request) {
       console.error("Cron fetch error:", fetchError);
       return NextResponse.json({ error: fetchError.message }, { status: 500 });
     }
+
+    console.log("Cron found posts:", duePosts?.length || 0);
 
     if (!duePosts || duePosts.length === 0) {
       return NextResponse.json({ message: "No reminders due", sent: 0 });
@@ -64,8 +75,10 @@ export async function GET(request: Request) {
           minute: "2-digit",
         });
 
+        console.log(`Sending reminder to ${userEmail} for post ${post.id}`);
+
         await resend.emails.send({
-          from: process.env.RESEND_FROM_EMAIL || "BlogToSocial <onboarding@resend.dev>",
+          from: process.env.RESEND_FROM_EMAIL || "BlogToSocial <reminders@blogtosocial.top>",
           to: userEmail,
           subject: `Reminder: Your ${platformName} post is scheduled for ${scheduledTime}`,
           html: `
@@ -84,6 +97,8 @@ export async function GET(request: Request) {
             </div>
           `,
         });
+
+        console.log(`Successfully sent reminder for post ${post.id} to ${userEmail}`);
 
         // Mark as reminded
         await supabase
